@@ -1,3 +1,23 @@
+## [0.2.2] - 2024-10-25
+
+### Added
+- 
+
+### Changed
+- 
+
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- 
+
+### Security
+- 
+
 ## [0.2.2] - Error: date.txt not found. Please run the script that generates it first.
 
 ### Added
