@@ -10,22 +10,43 @@ from fractions import Fraction
 import yaml
 import os
 import logging
+from typing import Dict, Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-print( os.getenv('RTSP_URL', "rtsp://localhost:8554/stream") )
+class RTSPStream:
+    def __init__(self, name: str, url: str, description: str = "", parameters: Optional[Dict] = None):
+        self.name = name
+        self.url = url
+        self.description = description
+        self.parameters = parameters or {}
+        self.status = "inactive"
+        self.last_error = None
+        self.created_at = datetime.now().isoformat()
+        self.updated_at = self.created_at
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "url": self.url,
+            "description": self.description,
+            "parameters": self.parameters,
+            "status": self.status,
+            "last_error": self.last_error,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
 
 class RTAPServer:
     def __init__(self):
         self.clients = set()
-        self.rtsp_url = os.getenv('RTSP_URL', "rtsp://localhost:8554/stream")
-        print( self.rtsp_url )
-        self.annotation_stream = None
+        self.streams: Dict[str, RTSPStream] = {}
         self.running = False
-        self.port = int(os.getenv('RTAP_PORT', 8765))
+        self.port = int(os.getenv('RTAP_PORT', 9000))  # Changed default to 9000
         self.host = os.getenv('RTAP_HOST', '0.0.0.0')
+        self.processing_tasks = {}
 
     def load_config(self, config_path):
         if os.path.exists(config_path):
@@ -33,19 +54,102 @@ class RTAPServer:
                 return yaml.safe_load(f)
         return {}
 
+    # REST API Handlers
+    async def handle_add_stream(self, request):
+        try:
+            data = await request.json()
+            name = data.get('name')
+            url = data.get('url')
+            description = data.get('description', '')
+            parameters = data.get('parameters', {})
+
+            if not all([name, url]):
+                return web.Response(
+                    status=400,
+                    text=json.dumps({"error": "name and url are required"}),
+                    content_type='application/json'
+                )
+
+            if name in self.streams:
+                return web.Response(
+                    status=409,
+                    text=json.dumps({"error": f"Stream '{name}' already exists"}),
+                    content_type='application/json'
+                )
+
+            stream = RTSPStream(name, url, description, parameters)
+            self.streams[name] = stream
+            
+            # Start processing the stream
+            self.processing_tasks[name] = asyncio.create_task(
+                self.process_stream(stream)
+            )
+
+            return web.Response(
+                text=json.dumps(stream.to_dict()),
+                content_type='application/json'
+            )
+        except Exception as e:
+            logger.error(f"Error adding stream: {e}")
+            return web.Response(
+                status=500,
+                text=json.dumps({"error": str(e)}),
+                content_type='application/json'
+            )
+
+    async def handle_list_streams(self, request):
+        try:
+            streams = {name: stream.to_dict() for name, stream in self.streams.items()}
+            return web.Response(
+                text=json.dumps(streams),
+                content_type='application/json'
+            )
+        except Exception as e:
+            logger.error(f"Error listing streams: {e}")
+            return web.Response(
+                status=500,
+                text=json.dumps({"error": str(e)}),
+                content_type='application/json'
+            )
+
+    async def handle_get_stream(self, request):
+        try:
+            name = request.match_info['name']
+            stream = self.streams.get(name)
+            
+            if not stream:
+                return web.Response(
+                    status=404,
+                    text=json.dumps({"error": f"Stream '{name}' not found"}),
+                    content_type='application/json'
+                )
+
+            return web.Response(
+                text=json.dumps(stream.to_dict()),
+                content_type='application/json'
+            )
+        except Exception as e:
+            logger.error(f"Error getting stream: {e}")
+            return web.Response(
+                status=500,
+                text=json.dumps({"error": str(e)}),
+                content_type='application/json'
+            )
+
     async def register_client(self, websocket):
         self.clients.add(websocket)
         try:
-            # For aiohttp WebSocketResponse, we wait for close
             while not websocket.closed:
                 await asyncio.sleep(1)
         finally:
             self.clients.remove(websocket)
             logger.info("Client disconnected")
 
-    async def broadcast_annotation(self, annotation):
+    async def broadcast_annotation(self, stream_name: str, annotation):
         if self.clients:
             disconnected_clients = set()
+            annotation['stream_name'] = stream_name
+            
             for client in self.clients:
                 try:
                     await client.send_json(annotation)
@@ -53,7 +157,6 @@ class RTAPServer:
                     logger.error(f"Error broadcasting to client: {e}")
                     disconnected_clients.add(client)
             
-            # Remove disconnected clients
             self.clients -= disconnected_clients
 
     async def handle_websocket(self, request):
@@ -68,16 +171,20 @@ class RTAPServer:
         finally:
             return ws
 
-    async def start_rtsp_processing(self):
-        self.running = True
+    async def process_stream(self, stream: RTSPStream):
         retry_count = 0
         max_retries = 3
 
         while self.running and retry_count < max_retries:
             try:
-                logger.info(f"Attempting to connect to RTSP stream: {self.rtsp_url}")
-                container = av.open(self.rtsp_url)
+                logger.info(f"Connecting to RTSP stream: {stream.name} ({stream.url})")
+                container = av.open(stream.url)
                 video_stream = container.streams.video[0]
+
+                # Update stream status
+                stream.status = "active"
+                stream.last_error = None
+                stream.updated_at = datetime.now().isoformat()
 
                 metadata_stream = {
                     "type": "metadata",
@@ -106,23 +213,30 @@ class RTAPServer:
                                     "location": motion
                                 }
                                 metadata_stream["annotations"].append(annotation)
-                                await self.broadcast_annotation(annotation)
+                                await self.broadcast_annotation(stream.name, annotation)
 
                             await asyncio.sleep(0.001)
 
                     except av.error.EOFError:
-                        logger.warning("End of stream reached")
+                        logger.warning(f"End of stream reached: {stream.name}")
                         break
 
             except Exception as e:
                 retry_count += 1
-                logger.error(f"Error processing RTSP stream (attempt {retry_count}/{max_retries}): {e}")
+                error_msg = f"Error processing stream {stream.name}: {str(e)}"
+                logger.error(error_msg)
+                stream.status = "error"
+                stream.last_error = error_msg
+                stream.updated_at = datetime.now().isoformat()
+                
                 if retry_count < max_retries:
-                    await asyncio.sleep(5)  # Wait before retrying
+                    await asyncio.sleep(5)
                 else:
-                    logger.error("Max retries reached, stopping RTSP processing")
-            finally:
-                self.running = False
+                    logger.error(f"Max retries reached for stream {stream.name}")
+                    break
+
+        stream.status = "inactive"
+        stream.updated_at = datetime.now().isoformat()
 
     def detect_motion(self, frame):
         try:
@@ -143,6 +257,13 @@ class RTAPServer:
 
     async def start_server(self):
         app = web.Application()
+        
+        # REST API routes
+        app.router.add_post('/api/streams', self.handle_add_stream)
+        app.router.add_get('/api/streams', self.handle_list_streams)
+        app.router.add_get('/api/streams/{name}', self.handle_get_stream)
+        
+        # WebSocket route
         app.router.add_get('/ws', self.handle_websocket)
 
         runner = web.AppRunner(app)
@@ -151,12 +272,9 @@ class RTAPServer:
         
         try:
             await site.start()
-            logger.info(f"RTAP Server started on ws://{self.host}:{self.port}")
+            logger.info(f"RTAP Server started on http://{self.host}:{self.port}")
+            self.running = True
             
-            # Start RTSP processing in background
-            rtsp_task = asyncio.create_task(self.start_rtsp_processing())
-            
-            # Keep the server running
             while True:
                 await asyncio.sleep(1)
                 
@@ -164,52 +282,16 @@ class RTAPServer:
             logger.error(f"Server error: {e}")
         finally:
             self.running = False
+            # Cancel all stream processing tasks
+            for task in self.processing_tasks.values():
+                task.cancel()
             await runner.cleanup()
-
-
-class RTAPClient:
-    def __init__(self, url=None, host='localhost', port=8765):
-        self.url = url or f"ws://{host}:{port}/ws"
-        self.running = True
-
-    async def connect(self):
-        retry_count = 0
-        max_retries = 3
-
-        while self.running and retry_count < max_retries:
-            try:
-                async with websockets.connect(self.url) as websocket:
-                    logger.info(f"Connected to RTAP server at {self.url}")
-                    while self.running:
-                        try:
-                            annotation = await websocket.recv()
-                            logger.info(f"Received annotation: {annotation}")
-                        except websockets.ConnectionClosed:
-                            logger.warning("Connection closed")
-                            break
-            except Exception as e:
-                retry_count += 1
-                logger.error(f"Connection error (attempt {retry_count}/{max_retries}): {e}")
-                if retry_count < max_retries:
-                    await asyncio.sleep(5)  # Wait before retrying
-                else:
-                    logger.error("Max retries reached, stopping client")
-                    break
 
 
 async def main():
     try:
         server = RTAPServer()
-        server_task = asyncio.create_task(server.start_server())
-
-        # Optional: Start client for testing
-        if os.getenv('START_CLIENT', 'false').lower() == 'true':
-            client = RTAPClient()
-            client_task = asyncio.create_task(client.connect())
-            await asyncio.gather(server_task, client_task)
-        else:
-            await server_task
-
+        await server.start_server()
     except KeyboardInterrupt:
         logger.info("Shutting down...")
     except Exception as e:

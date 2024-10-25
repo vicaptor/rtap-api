@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.2] - Error: date.txt not found. Please run the script that generates it first.
+## [0.3.0] - 2024-01-09
+
+### Added
+- REST API endpoints for stream management
+- Stream status monitoring
+- Multiple stream support
+- Stream configuration parameters
+- Individual stream error handling
+- Stream metadata tracking
+
+### Changed
+- Refactored server architecture for multiple streams
+- Enhanced error handling per stream
+- Improved stream status reporting
+- Updated WebSocket broadcasting with stream identification
+
+### Deprecated
+- 
+
+### Removed
+- Single stream handling in favor of multiple stream support
+
+### Fixed
+- Stream management and monitoring
+- Error handling for individual streams
+- Stream status tracking
+
+### Security
+- Added basic input validation for stream endpoints
+
+## [0.2.2] - 2024-01-09
 
 ### Added
 - Comprehensive logging system
@@ -18,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced RTSP stream processing reliability
 - Better error messages and logging
 
+### Deprecated
+- 
+
+### Removed
+- 
 
 ### Fixed
 - WebSocket wait_closed() attribute error
@@ -37,6 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standardized port usage between server and client
 - Improved code organization and comments
 
+### Deprecated
+- 
 
 ### Removed
 - Duplicate start_server method
@@ -64,6 +101,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved build and deployment instructions
 - Restructured development workflow
 
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- 
+
+### Security
+- 
 
 ## [0.1.0] - 2024-01-09
 
@@ -78,3 +126,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker compose support
 - Basic test framework
 
+### Changed
+- 
+
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- 
+
+### Security
+-
