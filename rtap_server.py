@@ -26,12 +26,6 @@ class RTAPServer:
         self.host = os.getenv('RTAP_HOST', '0.0.0.0')
         self.processing_tasks = {}
 
-    def load_config(self, config_path: str) -> dict:
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                return yaml.safe_load(f)
-        return {}
-
     def parse_query_filters(self, query: Dict[str, str]) -> Dict[str, Any]:
         """Parse and validate query parameters into filters."""
         filters = {}
@@ -52,9 +46,9 @@ class RTAPServer:
             if key not in ['start', 'end']:
                 filters[key] = value
 
+        logger.info(f"Parsed filters: {filters}")
         return filters
 
-    # Annotation Handlers
     async def handle_add_annotation(self, request: web.Request) -> web.Response:
         try:
             stream_name = request.match_info['name']
@@ -82,6 +76,7 @@ class RTAPServer:
             stream = self.streams[stream_name]
             annotation = stream.add_annotation(annotation_type, data, timestamp)
             
+            logger.info(f"Added annotation: {annotation.to_dict()}")
             await self.broadcast_annotation(stream_name, annotation.to_dict())
 
             return web.Response(
@@ -108,26 +103,17 @@ class RTAPServer:
                 )
 
             stream = self.streams[stream_name]
+            filters = self.parse_query_filters(dict(request.query))
             
-            # Parse query parameters into filters
-            filters = self.parse_query_filters(request.query)
+            annotations = stream.get_annotations(filters)
+            annotations_dict = [ann.to_dict() for ann in annotations]
             
-            # Get all annotations and apply filters
-            all_annotations = []
-            for annotation_list in stream.annotations.values():
-                all_annotations.extend(annotation_list)
-            
-            # Apply filters
-            filtered_annotations = [
-                ann.to_dict() for ann in all_annotations
-                if ann.matches_filters(filters)
-            ]
-
             # Sort by timestamp
-            filtered_annotations.sort(key=lambda x: x['timestamp'])
-
+            annotations_dict.sort(key=lambda x: x['timestamp'])
+            
+            logger.info(f"Retrieved {len(annotations_dict)} annotations with filters: {filters}")
             return web.Response(
-                text=json.dumps(filtered_annotations),
+                text=json.dumps(annotations_dict),
                 content_type='application/json'
             )
         except Exception as e:

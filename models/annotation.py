@@ -29,10 +29,38 @@ class Annotation:
                 if self.type != value:
                     return False
             else:
-                # Check in data dictionary for other filters
-                if key not in self.data or self.data[key] != value:
+                # Handle nested fields in data
+                if not self._check_nested_field(self.data, key, value):
                     return False
         return True
+
+    def _check_nested_field(self, data: Dict[str, Any], key: str, value: Any) -> bool:
+        """Recursively check nested fields in data dictionary."""
+        # Split the key into parts (e.g., 'location.area' -> ['location', 'area'])
+        key_parts = key.split('.')
+        
+        current = data
+        for part in key_parts[:-1]:
+            if not isinstance(current, dict) or part not in current:
+                return False
+            current = current[part]
+        
+        last_key = key_parts[-1]
+        
+        # Handle special cases for different annotation types
+        if self.type == 'event':
+            if last_key == 'severity' and 'severity' in data:
+                return str(data['severity']).lower() == str(value).lower()
+            elif last_key == 'area' and 'location' in data:
+                return data['location'].get('area', '').lower() == str(value).lower()
+            elif last_key in data:
+                return str(data[last_key]).lower() == str(value).lower()
+        
+        # For other annotation types, check if the field exists and matches
+        if last_key not in current:
+            return False
+        
+        return str(current[last_key]).lower() == str(value).lower()
 
     @staticmethod
     def parse_timestamp(timestamp: str) -> Optional[str]:
