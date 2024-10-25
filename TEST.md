@@ -9,7 +9,7 @@ zestaw testów API i komend curl do zarządzania streamami RTSP i różnymi typa
 ### Dodawanie nowego streamu RTSP
 ```bash
 # Dodaj nowy stream
-curl -X POST http://localhost:8080/api/streams \
+curl -X POST http://localhost:9000/api/streams \
   -H "Content-Type: application/json" \
   -d '{
     "name": "camera1",
@@ -18,7 +18,7 @@ curl -X POST http://localhost:8080/api/streams \
   }'
 
 # Dodaj stream z parametrami
-curl -X POST http://localhost:8080/api/streams \
+curl -X POST http://localhost:9000/api/streams \
   -H "Content-Type: application/json" \
   -d '{
     "name": "lecture_room",
@@ -35,10 +35,10 @@ curl -X POST http://localhost:8080/api/streams \
 ### Listowanie streamów
 ```bash
 # Lista wszystkich streamów
-curl -X GET http://localhost:8080/api/streams
+curl -X GET http://localhost:9000/api/streams
 
 # Pobierz szczegóły konkretnego streamu
-curl -X GET http://localhost:8080/api/streams/camera1
+curl -X GET http://localhost:9000/api/streams/camera1
 ```
 
 ## 2. Adnotacje Transkrypcji
@@ -46,7 +46,7 @@ curl -X GET http://localhost:8080/api/streams/camera1
 ### Dodawanie transkrypcji w czasie rzeczywistym
 ```bash
 # Dodaj transkrypcję dla konkretnego momentu w streamie
-curl -X POST http://localhost:8080/api/streams/lecture_room/annotations/transcript \
+curl -X POST http://localhost:9000/api/streams/lecture_room/annotations/transcript \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:30:15.123Z",
@@ -56,7 +56,7 @@ curl -X POST http://localhost:8080/api/streams/lecture_room/annotations/transcri
   }'
 
 # Dodaj transkrypcję z metadanymi
-curl -X POST http://localhost:8080/api/streams/lecture_room/annotations/transcript \
+curl -X POST http://localhost:9000/api/streams/lecture_room/annotations/transcript \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:30:20.456Z",
@@ -76,7 +76,7 @@ curl -X POST http://localhost:8080/api/streams/lecture_room/annotations/transcri
 ### Dodawanie opisów sceny
 ```bash
 # Dodaj opis ogólny
-curl -X POST http://localhost:8080/api/streams/camera1/annotations/description \
+curl -X POST http://localhost:9000/api/streams/camera1/annotations/description \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:31:00.000Z",
@@ -86,7 +86,7 @@ curl -X POST http://localhost:8080/api/streams/camera1/annotations/description \
   }'
 
 # Dodaj opis z lokalizacją
-curl -X POST http://localhost:8080/api/streams/camera1/annotations/description \
+curl -X POST http://localhost:9000/api/streams/camera1/annotations/description \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:31:05.000Z",
@@ -105,7 +105,7 @@ curl -X POST http://localhost:8080/api/streams/camera1/annotations/description \
 ### Dodawanie ramek wokół obiektów
 ```bash
 # Dodaj pojedynczą ramkę
-curl -X POST http://localhost:8080/api/streams/camera1/annotations/bounding-box \
+curl -X POST http://localhost:9000/api/streams/camera1/annotations/bounding-box \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:32:00.000Z",
@@ -122,7 +122,7 @@ curl -X POST http://localhost:8080/api/streams/camera1/annotations/bounding-box 
   }'
 
 # Dodaj multiple ramki
-curl -X POST http://localhost:8080/api/streams/camera1/annotations/bounding-boxes \
+curl -X POST http://localhost:9000/api/streams/camera1/annotations/bounding-boxes \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:32:05.000Z",
@@ -158,7 +158,7 @@ curl -X POST http://localhost:8080/api/streams/camera1/annotations/bounding-boxe
 ### Dodawanie zdarzeń
 ```bash
 # Dodaj zdarzenie pojedyncze
-curl -X POST http://localhost:8080/api/streams/camera1/annotations/event \
+curl -X POST http://localhost:9000/api/streams/camera1/annotations/event \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:33:00.000Z",
@@ -172,7 +172,7 @@ curl -X POST http://localhost:8080/api/streams/camera1/annotations/event \
   }'
 
 # Dodaj złożone zdarzenie
-curl -X POST http://localhost:8080/api/streams/camera1/annotations/event \
+curl -X POST http://localhost:9000/api/streams/camera1/annotations/event \
   -H "Content-Type: application/json" \
   -d '{
     "timestamp": "2024-03-15T14:33:05.000Z",
@@ -197,16 +197,16 @@ curl -X POST http://localhost:8080/api/streams/camera1/annotations/event \
 ### Pobieranie adnotacji
 ```bash
 # Pobierz wszystkie adnotacje dla streamu
-curl -X GET http://localhost:8080/api/streams/camera1/annotations
+curl -X GET http://localhost:9000/api/streams/camera1/annotations
 
 # Pobierz adnotacje określonego typu
-curl -X GET http://localhost:8080/api/streams/camera1/annotations?type=bounding-box
+curl -X GET http://localhost:9000/api/streams/camera1/annotations?type=bounding-box
 
 # Pobierz adnotacje z zakresu czasowego
-curl -X GET "http://localhost:8080/api/streams/camera1/annotations?start=2024-03-15T14:30:00.000Z&end=2024-03-15T14:35:00.000Z"
+curl -X GET "http://localhost:9000/api/streams/camera1/annotations?start=2024-03-15T14:30:00.000Z&end=2024-03-15T14:35:00.000Z"
 
 # Pobierz adnotacje z filtrowaniem
-curl -X GET "http://localhost:8080/api/streams/camera1/annotations?type=event&severity=low&area=entrance"
+curl -X GET "http://localhost:9000/api/streams/camera1/annotations?type=event&severity=low&area=entrance"
 ```
 
 ## 7. WebSocket Subscribe
@@ -214,10 +214,10 @@ curl -X GET "http://localhost:8080/api/streams/camera1/annotations?type=event&se
 ### Subskrypcja real-time adnotacji
 ```bash
 # Za pomocą wscat (należy zainstalować: npm install -g wscat)
-wscat -c ws://localhost:8080/api/streams/camera1/annotations/ws
+wscat -c ws://localhost:9000/api/streams/camera1/annotations/ws
 
 # Subskrypcja z parametrami (przez URL)
-wscat -c "ws://localhost:8080/api/streams/camera1/annotations/ws?types=transcript,event"
+wscat -c "ws://localhost:9000/api/streams/camera1/annotations/ws?types=transcript,event"
 ```
 
 ## Przykłady użycia w skrypcie testowym
@@ -242,7 +242,7 @@ chmod +x *.sh
 3. Monitoruj WebSocket:
 ```bash
 npm install -g wscat
-wscat -c ws://localhost:8080/api/streams/camera1/annotations/ws
+wscat -c ws://localhost:9000/api/streams/camera1/annotations/ws
 ```
 
 Dodatkowe sugestie:

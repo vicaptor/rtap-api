@@ -1,5 +1,17 @@
-aiohttp==3.8.1
-websockets==10.3
-opencv-python==4.6.0.66
-av==9.2.0
-numpy==1.22.4
+# Core dependencies
+aiohttp==3.9.3
+websockets==12.0
+opencv-python==4.9.0.80
+av==11.0.0
+numpy==1.26.4
+
+# Additional useful dependencies
+PyYAML==6.0.1  # For configuration files
+python-dotenv==1.0.1  # For environment variables
+pytest==8.0.2  # For testing
+pytest-asyncio==0.23.5  # For async tests
+pytest-aiohttp==1.0.5  # For aiohttp testing
+async-timeout==4.0.3  # For timeouts in async operations
+aiortsp==1.3.3  # For RTSP client functionality
+websockets
+aioconsole

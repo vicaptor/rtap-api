@@ -1,0 +1,3 @@
+port: 9000
+host: '0.0.0.0'
+rtsp_url: 'rtsp://localhost:8554/stream'

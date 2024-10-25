@@ -15,11 +15,13 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8765:8765"
-    depends_on:
-      - rtsp-server
+      - "9000:9000"  # Zmieniony port
     environment:
       - RTSP_URL=rtsp://rtsp-server:8554/stream
+      - RTAP_PORT=9000  # Ustawienie portu przez zmienną środowiskową
+      - RTAP_HOST=0.0.0.0
+    depends_on:
+      - rtsp-server
     networks:
       - streaming_network
 

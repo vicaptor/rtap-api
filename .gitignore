@@ -2,7 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+venv
+date.txt
+prompt.txt
+# Dependencies
+node_modules/
+vendor/
 # C extensions
 *.so
 

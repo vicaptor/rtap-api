@@ -7,12 +7,37 @@ from aiohttp import web
 import av
 from fractions import Fraction
 
+import yaml
+import os
+
+
 class RTAPServer:
     def __init__(self):
         self.clients = set()
-        self.rtsp_url = "rtsp://localhost:8554/stream"  # Domyślny URL RTSP
+        self.rtsp_url = os.getenv('RTSP_URL', "rtsp://localhost:8554/stream")
         self.annotation_stream = None
         self.running = False
+        self.port = int(os.getenv('RTAP_PORT', 8765))
+        self.host = os.getenv('RTAP_HOST', '0.0.0.0')
+
+    def load_config(self, config_path):
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                return yaml.safe_load(f)
+        return {}
+
+    async def start_server(self):
+        app = web.Application()
+        app.router.add_get('/ws', self.handle_websocket)
+
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, self.host, self.port)
+        await site.start()
+
+        print(f"RTAP Server started on ws://{self.host}:{self.port}")
+        await self.start_rtsp_processing()
+
 
     async def register_client(self, websocket):
         self.clients.add(websocket)
@@ -137,17 +162,17 @@ class RTAPClient:
 #client = RTAPClient(port=9000)  # lub client = RTAPClient(url="ws://localhost:9000/ws")
 
 
-# Przykład użycia
+
+# Przykład użycia:
 async def main():
-    # Uruchomienie serwera
-    server = RTAPServer()
+    # Uruchomienie na porcie 9000
+    server = RTAPServer(port=9000)
     server_task = asyncio.create_task(server.start_server())
 
-    # Uruchomienie klienta testowego
-    client = RTAPClient()
+    # Klient powinien się połączyć na nowym porcie
+    client = RTAPClient(url="ws://localhost:9000/ws")
     client_task = asyncio.create_task(client.connect())
 
-    # Oczekiwanie na zakończenie
     await asyncio.gather(server_task, client_task)
 
 if __name__ == "__main__":
