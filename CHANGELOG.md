@@ -1,4 +1,4 @@
-## [0.2.1] - Error: date.txt not found. Please run the script that generates it first.
+## [0.2.2] - Error: date.txt not found. Please run the script that generates it first.
 
 ### Added
 - 
@@ -25,7 +25,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.1] - Error: date.txt not found. Please run the script that generates it first.
+## [0.2.2] - Error: date.txt not found. Please run the script that generates it first.
+
+### Added
+- Comprehensive logging system
+- Retry mechanism for RTSP connections
+- Error handling for WebSocket connections
+- Graceful shutdown handling
+
+### Changed
+- Improved WebSocket client-server communication
+- Enhanced RTSP stream processing reliability
+- Better error messages and logging
+
+
+### Fixed
+- WebSocket wait_closed() attribute error
+- RTSP connection handling
+- Client disconnection handling
+- Server shutdown process
+
+### Security
+- Added basic error handling to prevent information leakage
+
+## [0.2.1] - 2024-01-09
 
 ### Added
 - Missing numpy import in rtap.py
@@ -34,8 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standardized port usage between server and client
 - Improved code organization and comments
 
-### Deprecated
-- 
 
 ### Removed
 - Duplicate start_server method
@@ -63,17 +84,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved build and deployment instructions
 - Restructured development workflow
 
-### Deprecated
-- 
-
-### Removed
-- 
-
-### Fixed
-- 
-
-### Security
-- 
 
 ## [0.1.0] - 2024-01-09
 
@@ -88,17 +98,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker compose support
 - Basic test framework
 
-### Changed
-- 
-
-### Deprecated
-- 
-
-### Removed
-- 
-
-### Fixed
-- 
-
-### Security
--
