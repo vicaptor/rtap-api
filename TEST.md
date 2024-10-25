@@ -203,7 +203,7 @@ curl -X GET http://localhost:9000/api/streams/camera1/annotations
 curl -X GET http://localhost:9000/api/streams/camera1/annotations?type=bounding-box
 
 # Pobierz adnotacje z zakresu czasowego
-curl -X GET "http://localhost:9000/api/streams/camera1/annotations?start=2024-03-15T14:30:00.000Z&end=2024-03-15T14:35:00.000Z"
+curl -X GET "http://localhost:9000/api/streams/camera1/annotations?start=2024-10-25T15:01:00.000Z&end=2024-10-25T15:04:00.000Z"
 
 # Pobierz adnotacje z filtrowaniem
 curl -X GET "http://localhost:9000/api/streams/camera1/annotations?type=event&severity=low&area=entrance"

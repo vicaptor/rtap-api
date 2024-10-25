@@ -12,6 +12,7 @@ vendor/
 *.so
 .env
 TEST.md
+.TEST.md
 # Distribution / packaging
 .Python
 build/

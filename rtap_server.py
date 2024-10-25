@@ -8,9 +8,10 @@ import av
 import yaml
 import os
 import logging
-from typing import Dict, Set
+from typing import Dict, Set, Optional, List, Any
+from urllib.parse import parse_qs
 
-from models import RTSPStream
+from models import RTSPStream, Annotation
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,11 +32,40 @@ class RTAPServer:
                 return yaml.safe_load(f)
         return {}
 
+    def parse_query_filters(self, query: Dict[str, str]) -> Dict[str, Any]:
+        """Parse and validate query parameters into filters."""
+        filters = {}
+        
+        # Handle special time range parameters
+        if 'start' in query:
+            start_time = Annotation.parse_timestamp(query['start'])
+            if start_time:
+                filters['start'] = start_time
+        
+        if 'end' in query:
+            end_time = Annotation.parse_timestamp(query['end'])
+            if end_time:
+                filters['end'] = end_time
+
+        # Handle all other parameters as data filters
+        for key, value in query.items():
+            if key not in ['start', 'end']:
+                filters[key] = value
+
+        return filters
+
     # Annotation Handlers
     async def handle_add_annotation(self, request: web.Request) -> web.Response:
         try:
             stream_name = request.match_info['name']
-            annotation_type = request.match_info['type']
+            annotation_type = request.match_info.get('type') or request.query.get('type')
+            
+            if not annotation_type:
+                return web.Response(
+                    status=400,
+                    text=json.dumps({"error": "Annotation type is required"}),
+                    content_type='application/json'
+                )
             
             if stream_name not in self.streams:
                 return web.Response(
@@ -52,7 +82,6 @@ class RTAPServer:
             stream = self.streams[stream_name]
             annotation = stream.add_annotation(annotation_type, data, timestamp)
             
-            # Broadcast annotation to WebSocket clients
             await self.broadcast_annotation(stream_name, annotation.to_dict())
 
             return web.Response(
@@ -70,7 +99,6 @@ class RTAPServer:
     async def handle_get_annotations(self, request: web.Request) -> web.Response:
         try:
             stream_name = request.match_info['name']
-            annotation_type = request.match_info.get('type')
             
             if stream_name not in self.streams:
                 return web.Response(
@@ -81,24 +109,35 @@ class RTAPServer:
 
             stream = self.streams[stream_name]
             
-            if annotation_type:
-                if annotation_type not in stream.annotations:
-                    return web.Response(
-                        status=404,
-                        text=json.dumps({"error": f"Annotation type '{annotation_type}' not found"}),
-                        content_type='application/json'
-                    )
-                annotations = [ann.to_dict() for ann in stream.annotations[annotation_type]]
-            else:
-                annotations = {
-                    k: [ann.to_dict() for ann in v]
-                    for k, v in stream.annotations.items()
-                }
+            # Parse query parameters into filters
+            filters = self.parse_query_filters(request.query)
+            
+            # Get all annotations and apply filters
+            all_annotations = []
+            for annotation_list in stream.annotations.values():
+                all_annotations.extend(annotation_list)
+            
+            # Apply filters
+            filtered_annotations = [
+                ann.to_dict() for ann in all_annotations
+                if ann.matches_filters(filters)
+            ]
+
+            # Sort by timestamp
+            filtered_annotations.sort(key=lambda x: x['timestamp'])
 
             return web.Response(
-                text=json.dumps(annotations),
+                text=json.dumps(filtered_annotations),
                 content_type='application/json'
             )
+        except Exception as e:
+            logger.error(f"Error getting annotations: {e}")
+            return web.Response(
+                status=500,
+                text=json.dumps({"error": str(e)}),
+                content_type='application/json'
+            )
+
         except Exception as e:
             logger.error(f"Error getting annotations: {e}")
             return web.Response(
@@ -132,7 +171,7 @@ class RTAPServer:
 
             stream = RTSPStream(name, url, description, parameters)
             self.streams[name] = stream
-            
+
             self.processing_tasks[name] = asyncio.create_task(
                 self.process_stream(stream)
             )
@@ -168,7 +207,7 @@ class RTAPServer:
         try:
             name = request.match_info['name']
             stream = self.streams.get(name)
-            
+
             if not stream:
                 return web.Response(
                     status=404,
@@ -205,21 +244,21 @@ class RTAPServer:
                 "stream_name": stream_name,
                 "annotation": annotation
             }
-            
+
             for client in self.clients:
                 try:
                     await client.send_json(message)
                 except Exception as e:
                     logger.error(f"Error broadcasting to client: {e}")
                     disconnected_clients.add(client)
-            
+
             self.clients -= disconnected_clients
 
     async def handle_websocket(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse()
         await ws.prepare(request)
         logger.info("New client connected")
-        
+
         try:
             await self.register_client(ws)
         except Exception as e:
@@ -280,7 +319,7 @@ class RTAPServer:
                 stream.status = "error"
                 stream.last_error = error_msg
                 stream.updated_at = datetime.now().isoformat()
-                
+
                 if retry_count < max_retries:
                     await asyncio.sleep(5)
                 else:
@@ -290,7 +329,7 @@ class RTAPServer:
         stream.status = "inactive"
         stream.updated_at = datetime.now().isoformat()
 
-    def detect_motion(self, frame: np.ndarray) -> dict:
+    def detect_motion(self, frame: np.ndarray) -> Optional[dict]:
         try:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             gray = cv2.GaussianBlur(gray, (21, 21), 0)
@@ -309,32 +348,33 @@ class RTAPServer:
 
     async def start_server(self) -> None:
         app = web.Application()
-        
+
         # Stream management routes
         app.router.add_post('/api/streams', self.handle_add_stream)
         app.router.add_get('/api/streams', self.handle_list_streams)
         app.router.add_get('/api/streams/{name}', self.handle_get_stream)
-        
-        # Annotation routes
+
+        # Annotation routes - support both path and query parameters
+        app.router.add_post('/api/streams/{name}/annotations', self.handle_add_annotation)
         app.router.add_post('/api/streams/{name}/annotations/{type}', self.handle_add_annotation)
         app.router.add_get('/api/streams/{name}/annotations', self.handle_get_annotations)
         app.router.add_get('/api/streams/{name}/annotations/{type}', self.handle_get_annotations)
-        
+
         # WebSocket route
         app.router.add_get('/ws', self.handle_websocket)
 
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, self.host, self.port)
-        
+
         try:
             await site.start()
             logger.info(f"RTAP Server started on http://{self.host}:{self.port}")
             self.running = True
-            
+
             while True:
                 await asyncio.sleep(1)
-                
+
         except Exception as e:
             logger.error(f"Server error: {e}")
         finally:
