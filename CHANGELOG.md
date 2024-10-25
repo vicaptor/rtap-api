@@ -1,9 +1,139 @@
+## [0.4.3] - 2024-10-25
+
+### Added
+- 
+
+### Changed
+- 
+
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- 
+
+### Security
+- 
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.3] - 2024-10-25
+
+### Added
+- Support for query parameter filtering of annotations
+- Additional filtering options (start_time, end_time, limit)
+- Flexible annotation type specification (path or query parameter)
+
+### Changed
+- Enhanced annotation filtering logic
+- Improved route handling for annotations
+- Better type handling for optional parameters
+
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- Annotation filtering functionality
+- Query parameter handling
+- Route flexibility for annotation endpoints
+
+### Security
+-
+
+## [0.4.2] - 2024-01-09
+
+### Added
+- New rtap_server.py module
+- Enhanced type hints for all methods
+- Return type annotations
+
+### Changed
+- Moved RTAPServer class to separate file
+- Simplified main rtap.py file
+- Improved type safety with annotations
+- Enhanced method signatures
+
+### Deprecated
+- 
+
+### Removed
+- Server logic from main file
+
+### Fixed
+- Code organization
+- Type safety
+- Method signatures
+
+### Security
+- 
+
+## [0.4.1] - 2024-01-09
+
+### Added
+- New models package for data structures
+- Separate model files for Annotation and RTSPStream
+- Type hints for model classes
+
+### Changed
+- Moved Annotation class to models/annotation.py
+- Moved RTSPStream class to models/stream.py
+- Improved code organization with modular structure
+- Enhanced type annotations
+
+### Deprecated
+- 
+
+### Removed
+- Inline model definitions from rtap.py
+
+### Fixed
+- Code organization and maintainability
+- Module imports and dependencies
+
+### Security
+- 
+
+## [0.4.0] - 2024-01-09
+
+### Added
+- Annotation system with support for different types (transcript, motion, object, custom)
+- New API endpoints for managing annotations
+- Annotation storage per stream
+- Real-time annotation broadcasting
+- Annotation timestamp tracking
+- Structured annotation data model
+
+### Changed
+- Enhanced stream class to include annotation management
+- Improved WebSocket broadcasting with structured messages
+- Updated motion detection to use annotation system
+- Better error handling for annotation operations
+
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- Annotation endpoint routing
+- Stream-specific annotation handling
+- Real-time annotation updates
+
+### Security
+- Added validation for annotation data
+
 
 ## [0.3.0] - 2024-01-09
 
