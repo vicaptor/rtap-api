@@ -1,4 +1,4 @@
-## [0.4.3] - 2024-10-25
+## [0.4.4] - 2024-10-25
 
 ### Added
 - 
@@ -25,6 +25,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2024-10-25
+
+### Added
+- Enhanced annotation filtering system
+- Time range filtering with start/end parameters
+- Custom field filtering (severity, area, etc.)
+- Multiple filter criteria support
+- Timestamp validation and parsing
+- Filter matching logic in Annotation class
+
+### Changed
+- Improved annotation query handling
+- Enhanced filter parsing and validation
+- Better timestamp handling
+- More flexible annotation filtering
+
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- Time range filtering functionality
+- Custom field filtering
+- Multiple criteria filtering
+- Timestamp handling and validation
+
+### Security
+- Added timestamp validation
+- Improved query parameter handling
+- 
 ## [0.4.3] - 2024-10-25
 
 ### Added
