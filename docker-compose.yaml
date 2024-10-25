@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  rtsp-server:
+    image: aler9/rtsp-simple-server
+    ports:
+      - "8554:8554"
+    volumes:
+      - ./rtsp-config:/rtsp-simple-server
+    networks:
+      - streaming_network
+
+  rtap-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8765:8765"
+    depends_on:
+      - rtsp-server
+    environment:
+      - RTSP_URL=rtsp://rtsp-server:8554/stream
+    networks:
+      - streaming_network
+
+networks:
+  streaming_network:
+    driver: bridge
