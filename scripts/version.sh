@@ -10,16 +10,14 @@ validate_version() {
 
 # Function to get the current date from date.txt
 get_current_date() {
-    if [ ! -f "date.txt" ]; then
-        echo "Error: date.txt not found. Please run the script that generates it first."
-        exit 1
-    fi
-    cat date.txt
+    date +%Y-%m-%d
 }
 
 # Function to get current version from CHANGELOG.md
 get_current_version() {
-    grep -m 1 "## \[" CHANGELOG.md | grep -o "\[.*\]" | tr -d '[]'
+    local version
+    version=$(grep -m 1 "## \[.*\]" CHANGELOG.md | sed -E 's/## \[(.*)\].*/\1/')
+    echo "$version"
 }
 
 # Function to get current changes from CHANGELOG.md
@@ -51,14 +49,80 @@ update_last_version_date() {
     fi
 }
 
+# Function to update CHANGELOG.md with new version
+update_changelog() {
+    local new_version=$1
+    local date=$(get_current_date)
+    
+    # Create new version template
+    local new_content="## [$new_version] - $date
+
+### Added
+- 
+
+### Changed
+- 
+
+### Deprecated
+- 
+
+### Removed
+- 
+
+### Fixed
+- 
+
+### Security
+- 
+"
+    
+    # Insert new version after the header section
+    awk -v new="$new_content" '
+        /^## \[.*\]/ { if (!found) { print new; found=1 } }
+        { print }
+    ' CHANGELOG.md > CHANGELOG.md.tmp
+    
+    if [ ! -s CHANGELOG.md.tmp ]; then
+        # If no version headers found, append after format description
+        awk -v new="$new_content" '
+            /and this project adheres to/ { print; print ""; print new; next }
+            { print }
+        ' CHANGELOG.md > CHANGELOG.md.tmp
+    fi
+    
+    mv CHANGELOG.md.tmp CHANGELOG.md
+}
+
+# Main script
+if [ "$1" = "--current" ]; then
+    current_version=$(get_current_version)
+    echo "Current version: $current_version"
+    exit 0
+fi
+
+if [ -n "$1" ]; then
+    new_version=$1
+    validate_version "$new_version"
+    update_changelog "$new_version"
+    echo "Updated CHANGELOG.md with version $new_version"
+else
+    current_version=$(get_current_version)
+    echo "Using version: $current_version"
+    echo "Using changes:"
+    awk '/^## \[.*\]/{p=1;print;next} /^## \[.*\]/{p=0} p' CHANGELOG.md | head -n 20
+fi
+
+
+
+
 # Function to update version in package files
 update_version() {
     local new_version=$1
     local date=$(get_current_date)
-    
+
     # First update the last version's date
     update_last_version_date
-    
+
     # Then add the new version entry
     local temp_file=$(mktemp)
     echo "## [$new_version] - $date" > "$temp_file"
@@ -100,7 +164,7 @@ tag_and_push() {
     local new_version=$1
     local base_message=$2
     local changes=$(get_latest_changes)
-    
+
     # Prepare commit message with version and latest changes
     local commit_message="chore: bump version to $new_version
 
@@ -118,12 +182,12 @@ $base_message"
 
     # Create tag with the same message
     git tag -a "v$new_version" -m "$commit_message"
-    
+
     echo "Pushing changes and tags to remote repository..."
-    
+
     # Push both the changes and the tags
     git push && git push --tags
-    
+
     if [ $? -eq 0 ]; then
         echo "Successfully pushed changes and tags to remote repository"
     else
@@ -131,7 +195,6 @@ $base_message"
         exit 1
     fi
 }
-
 # Main script
 # Ensure we're in the project root
 if [ ! -f "CHANGELOG.md" ]; then
