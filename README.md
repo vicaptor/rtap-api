@@ -1,3 +1,4 @@
+![obraz](https://github.com/user-attachments/assets/ed4069cb-690e-4c9d-b284-48cb75aba6c6)
 
 # RTAP-API (Real-Time Annotation Processing API)
 
@@ -16,6 +17,8 @@ A Python-based API service for real-time video stream processing and annotation.
 - Python 3.7+
 - pip package manager
 - Docker (optional, for containerized deployment)
+
+![obraz](https://github.com/user-attachments/assets/b071c58a-6bfe-41a0-9cef-f6617a9bc6b7)
 
 ## Installation
 
