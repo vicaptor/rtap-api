@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTAP Stream Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .stream-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .video-container {
+            width: 100%;
+            margin-bottom: 20px;
+            position: relative;
+            padding-top: 56.25%;
+        }
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .stream-info {
+            margin-bottom: 20px;
+        }
+        .annotations-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .annotation-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .annotation {
+            border-left: 4px solid #007bff;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+        }
+        .annotation-time {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .annotation-type {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .annotation-content {
+            margin-top: 5px;
+        }
+        select {
+            padding: 8px;
+            margin-bottom: 20px;
+            width: 200px;
+        }
+        .status-container {
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <select id="streamSelect" onchange="changeStream()">
+            <option value="">Select a stream</option>
+        </select>
+
+        <div class="status-container" id="statusContainer"></div>
+
+        <div class="stream-container">
+            <div class="stream-info">
+                <h2 id="streamName"></h2>
+                <p id="streamDescription"></p>
+            </div>
+            <div class="video-container">
+                <video id="videoPlayer" controls>
+                    Your browser does not support the video element.
+                </video>
+            </div>
+        </div>
+
+        <div class="annotations-container">
+            <div class="annotation-section">
+                <h3>Transcripts</h3>
+                <div id="transcriptAnnotations"></div>
+            </div>
+            <div class="annotation-section">
+                <h3>Descriptions</h3>
+                <div id="descriptionAnnotations"></div>
+            </div>
+            <div class="annotation-section">
+                <h3>Events</h3>
+                <div id="eventAnnotations"></div>
+            </div>
+            <div class="annotation-section">
+                <h3>Detections</h3>
+                <div id="boundingBoxAnnotations"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let currentStream;
+        let hls;
+        const annotationWindow = parseInt('${ANNOTATION_WINDOW}') || 5;
+
+        function updateStatus(message, isError = false) {
+            const container = document.getElementById('statusContainer');
+            container.innerHTML = `<span class="${isError ? 'error' : 'success'}">${message}</span>`;
+            console.log(`Status: ${message}`);
+        }
+
+        async function loadStreams() {
+            try {
+                const response = await fetch('/api/streams');
+                const streams = await response.json();
+                const select = document.getElementById('streamSelect');
+                
+                Object.entries(streams).forEach(([name, stream]) => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+                updateStatus('Streams loaded successfully');
+            } catch (error) {
+                updateStatus('Error loading streams: ' + error.message, true);
+                console.error('Error loading streams:', error);
+            }
+        }
+
+        async function changeStream() {
+            const streamName = document.getElementById('streamSelect').value;
+            if (!streamName) return;
+
+            try {
+                const response = await fetch(`/api/streams/${streamName}`);
+                const stream = await response.json();
+                currentStream = stream;
+
+                document.getElementById('streamName').textContent = stream.name;
+                document.getElementById('streamDescription').textContent = stream.description;
+                
+                initializeVideo(streamName);
+                connectWebSocket();
+                loadRecentAnnotations();
+                updateStatus(`Connected to stream: ${streamName}`);
+            } catch (error) {
+                updateStatus(`Error changing stream: ${error.message}`, true);
+                console.error('Error changing stream:', error);
+            }
+        }
+
+        function initializeVideo(streamName) {
+            const video = document.getElementById('videoPlayer');
+            
+            if (hls) {
+                hls.destroy();
+            }
+            
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    debug: true,
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 30
+                });
+                
+                const hlsUrl = `/hls/${streamName}/stream.m3u8`;
+                console.log(`Loading HLS stream from: ${hlsUrl}`);
+                
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    console.log('HLS manifest parsed, attempting playback');
+                    video.play().catch(e => {
+                        console.error('Error playing video:', e);
+                        updateStatus('Error playing video: ' + e.message, true);
+                    });
+                });
+                
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('HLS error:', data);
+                    if (data.fatal) {
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log("Network error, trying to recover...");
+                                updateStatus('Network error, recovering...', true);
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log("Media error, trying to recover...");
+                                updateStatus('Media error, recovering...', true);
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                console.error("Fatal error, destroying HLS instance");
+                                updateStatus('Fatal streaming error', true);
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            }
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = `/hls/${streamName}/stream.m3u8`;
+            }
+        }
+
+        function connectWebSocket() {
+            if (ws) {
+                ws.close();
+            }
+
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.stream_name === currentStream.name) {
+                    addAnnotation(data.annotation);
+                }
+            };
+            
+            ws.onopen = () => updateStatus('WebSocket connected');
+            ws.onclose = () => updateStatus('WebSocket disconnected', true);
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('WebSocket error', true);
+            };
+        }
+
+        async function loadRecentAnnotations() {
+            try {
+                const now = new Date();
+                const startTime = new Date(now - annotationWindow * 1000).toISOString();
+                
+                const response = await fetch(
+                    `/api/streams/${currentStream.name}/annotations?start=${startTime}`
+                );
+                const annotations = await response.json();
+                
+                // Clear all annotation containers
+                document.getElementById('transcriptAnnotations').innerHTML = '';
+                document.getElementById('descriptionAnnotations').innerHTML = '';
+                document.getElementById('eventAnnotations').innerHTML = '';
+                document.getElementById('boundingBoxAnnotations').innerHTML = '';
+                
+                annotations.forEach(addAnnotation);
+            } catch (error) {
+                console.error('Error loading annotations:', error);
+                updateStatus('Error loading annotations: ' + error.message, true);
+            }
+        }
+
+        function addAnnotation(annotation) {
+            let container;
+            switch(annotation.type) {
+                case 'transcript':
+                    container = document.getElementById('transcriptAnnotations');
+                    break;
+                case 'description':
+                    container = document.getElementById('descriptionAnnotations');
+                    break;
+                case 'event':
+                    container = document.getElementById('eventAnnotations');
+                    break;
+                case 'bounding-box':
+                    container = document.getElementById('boundingBoxAnnotations');
+                    break;
+                default:
+                    return;
+            }
+            
+            const div = document.createElement('div');
+            div.className = 'annotation';
+            
+            const timeAgo = Math.round((new Date() - new Date(annotation.timestamp)) / 1000);
+            
+            div.innerHTML = `
+                <div class="annotation-time">${timeAgo}s ago</div>
+                <div class="annotation-content">${formatAnnotationContent(annotation)}</div>
+            `;
+            
+            container.insertBefore(div, container.firstChild);
+            
+            // Keep only recent annotations
+            const annotations = container.getElementsByClassName('annotation');
+            while (annotations.length > 20) {
+                container.removeChild(annotations[annotations.length - 1]);
+            }
+        }
+
+        function formatAnnotationContent(annotation) {
+            switch(annotation.type) {
+                case 'transcript':
+                    return `"${annotation.data.text}"<br>Speaker: ${annotation.data.speaker}<br>Confidence: ${Math.round(annotation.data.confidence * 100)}%`;
+                case 'description':
+                    return `${annotation.data.description}<br>Confidence: ${Math.round(annotation.data.confidence * 100)}%<br>Tags: ${annotation.data.tags.join(', ')}`;
+                case 'event':
+                    return `${annotation.data.event_type}<br>Severity: ${annotation.data.severity}<br>Location: ${annotation.data.location.area}`;
+                case 'bounding-box':
+                    return `Object: ${annotation.data.object.type}<br>Confidence: ${Math.round(annotation.data.object.confidence * 100)}%<br>Position: (${annotation.data.object.coordinates.x}, ${annotation.data.object.coordinates.y})`;
+                default:
+                    return JSON.stringify(annotation.data);
+            }
+        }
+
+        // Update annotations every second
+        setInterval(() => {
+            if (currentStream) {
+                loadRecentAnnotations();
+            }
+        }, 1000);
+
+        // Initial load
+        loadStreams();
+    </script>
+</body>
+</html>
