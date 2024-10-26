@@ -1,3 +1,4 @@
+
 # RTAP-API (Real-Time Annotation Processing API)
 
 A Python-based API service for real-time video stream processing and annotation.

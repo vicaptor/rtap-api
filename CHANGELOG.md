@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.4] - 2024-10-25
+## [0.4.4] - 2024-10-26
 
 ### Added
 - Enhanced annotation filtering system
@@ -63,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 -
 
-## [0.4.2] - 2024-01-09
+## [0.4.2] - 2024-10-25
 
 ### Added
 - New rtap_server.py module
@@ -90,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - 
 
-## [0.4.1] - 2024-01-09
+## [0.4.1] - 2024-10-25
 
 ### Added
 - New models package for data structures
@@ -116,7 +116,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - 
 
-## [0.4.0] - 2024-01-09
+## [0.4.0] - 2024-10-25
 
 ### Added
 - Annotation system with support for different types (transcript, motion, object, custom)
@@ -147,7 +147,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for annotation data
 
 
-## [0.3.0] - 2024-01-09
+## [0.3.0] - 2024-10-25
 
 ### Added
 - REST API endpoints for stream management
@@ -177,7 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Added basic input validation for stream endpoints
 
-## [0.2.2] - 2024-01-09
+## [0.2.2] - 2024-10-25
 
 ### Added
 - Comprehensive logging system
@@ -205,7 +205,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Added basic error handling to prevent information leakage
 
-## [0.2.1] - 2024-01-09
+## [0.2.1] - 2024-10-25
 
 ### Added
 - Missing numpy import in rtap.py
@@ -228,7 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - 
 
-## [0.2.0] - 2024-01-09
+## [0.2.0] - 2024-10-25
 
 ### Added
 - Project documentation structure
@@ -255,7 +255,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - 
 
-## [0.1.0] - 2024-01-09
+## [0.1.0] - 2024-10-25
 
 ### Added
 - Initial project setup
